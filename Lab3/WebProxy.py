@@ -4,16 +4,19 @@ import os
 # Create a server socket, bind it to a port and start listening
 proxySerSock = socket(AF_INET, SOCK_STREAM)
 #fill in start.
+serverPort = 7030
+proxySerSock.bind(("localhost", serverPort))
+proxySerSock.listen(1)
 #fill in end.
 
 while 1:
     print('Ready to serve...')
     #accept connection from clients
-    proxyCliSock, addr = #Fill in start #Fill in end
+    proxyCliSock, addr = proxySerSock.accept()
     print('Received a connection from:', addr)
 
     # get the http request from client
-    message = # fill in start  # fill in end
+    message = proxyCliSock.recv(1024).decode()
     print(message)
 
     # if message is not a GET request send a response 400 Bad request to the client
@@ -22,6 +25,8 @@ while 1:
     if not message.startswith("GET"):
         print("message is not a GET")
         # fill in start.
+        header = "400 BAD REQUEST\r\n\r\n"
+        proxyCliSock.send(header.encode())
         # fill in end.
         continue
 
@@ -29,8 +34,8 @@ while 1:
     slashPlusUrl = message.split()[1]
     url = slashPlusUrl.partition("/")[2]
     # fill in start
-    #hostn =
-    #pathname =
+    hostn = url.split("/")[0]
+    pathname = "/".join(url.split("/")[1:])
     # fill in end.
     pathname = "/" + pathname
     # remove "www." from the hostname if it starts with "www."
@@ -52,27 +57,35 @@ while 1:
 
         # Send http response header and object
         #fill in start
+        header = "HTTP/1.1 200 OK\r\n\r\n"
+        proxyCliSock.send(header.encode())
+        proxyCliSock.send(object)
         #fill in end
 
         fileExist = "true"
         print('Read from cache')
         #close socket and file
         #fill in start
+        proxyCliSock.close()
+        f.close()
         #fill in end
 
     except IOError: # Error handling for file not found in cache
 
         if fileExist == "false":
             # Create a socket on the proxyserver to connect to the original server on port 80
-            proxyAsClientSocket = #Fill in start #Fill in end
+            proxyAsClientSocket = socket(AF_INET, SOCK_STREAM)
             # Connect to the original server on port 80
-            #Fill in start #Fill in end
+            proxyAsClientSocket.connect((hostn, 80))
 
 
             #create a get request message and send the message to the server using the socket just created in above lines
+            
             # Hint : use pathname and hostn in the request message
 
             #fill in start
+            request = f"GET {pathname} HTTP/1.1\r\nHost: {hostn}\r\nConnection: close"
+            proxyAsClientSocket.send(request.encode())
             #fill in end
 
             # initialize response to empty in binary format - works for any type of document
@@ -81,22 +94,30 @@ while 1:
             # receive data from web server
             #Hint: You can use a while loop and get response in chunks until it is finished.
             #Fill in start
+            while True:
+                data = proxyAsClientSocket.recv(4096)
+                if not data:
+                    break
+                total_response += data
             #Fill in end
 
             #Separate header and object
             #Hint use split function. Check the lecture notes to see what separates the response header and object
-            response_header = #Fill in start #Fill in end
-            response_object = #Fill in start #Fill in end
+            response_header = total_response.split(b"\r\n\r\n", 1)[0]
+            response_object = total_response.split(b"\r\n\r\n", 1)[1]
 
 
             if b'200 OK' in response_header:
                 # if the response is a 200 OK response create the directory and file and write the object into the file
                 # Then, send http response header and object to the client
                 #Fill in start
+                with open(directory, "wb") as cacheFile:
+                    cacheFile.write(response_object)
                 #Fill in end
             else:
                 #Otherwise, i.e., if response is not a 200 OK message,send 400 bad response
                 #Fill in start
+                proxyCliSock.send("HTTP/1.1 400 BAD REQUEST\r\n\r\n")
                 #Fill in end
 
             # close socket between proxy and origin server

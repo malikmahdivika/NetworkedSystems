@@ -47,7 +47,8 @@ while 1:
 
     fileExist = "false"
 
-    directory = "./" + url
+    directory = "./" + url.replace("/", "_")
+    #print(f"Directory name: {directory}\n")
 
     try:
         # Check whether the file exist in the cache using open() method
@@ -84,7 +85,7 @@ while 1:
             # Hint : use pathname and hostn in the request message
 
             #fill in start
-            request = f"GET {pathname} HTTP/1.1\r\nHost: {hostn}\r\nConnection: close"
+            request = f"GET {pathname} HTTP/1.1\r\nHost: {hostn}\r\nConnection: close\r\n\r\n"
             proxyAsClientSocket.send(request.encode())
             #fill in end
 
@@ -106,18 +107,20 @@ while 1:
             response_header = total_response.split(b"\r\n\r\n", 1)[0]
             response_object = total_response.split(b"\r\n\r\n", 1)[1]
 
-
+            #print(f"header response code: {response_header.decode()}\n")
             if b'200 OK' in response_header:
                 # if the response is a 200 OK response create the directory and file and write the object into the file
                 # Then, send http response header and object to the client
                 #Fill in start
                 with open(directory, "wb") as cacheFile:
                     cacheFile.write(response_object)
+
+                proxyCliSock.sendall(response_header + "\r\n\r\n".encode() + response_object)
                 #Fill in end
             else:
                 #Otherwise, i.e., if response is not a 200 OK message,send 400 bad response
                 #Fill in start
-                proxyCliSock.send("HTTP/1.1 400 BAD REQUEST\r\n\r\n")
+                proxyCliSock.send("HTTP/1.1 400 BAD REQUEST\r\n\r\n".encode())
                 #Fill in end
 
             # close socket between proxy and origin server

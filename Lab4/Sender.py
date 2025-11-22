@@ -23,27 +23,31 @@ if __name__ == "__main__":
         "sending message - 10",
     ]
 
-    timeout = 2  # send the next message if no response
-    time_of_last_data = time.time()
+    timeout = 2  # Receiver echo timeout (not transport-layer timeout)
 
     swrdt = SWRDT.SWRDT("sender", args.receiver, args.port)
-    for msg_S in msg_L:
-        print("Sent Message: " + msg_S)
-        swrdt.swrdt_send(msg_S)
 
-        # try to receive message before timeout
-        msg_S = None
-        while msg_S == None:
-            msg_S = swrdt.swrdt_receive()
-            if msg_S is None:
-                if time_of_last_data + timeout < time.time():
-                    break
-                else:
-                    continue
-        time_of_last_data = time.time()
+    for message in msg_L:
+        # Application-layer print (transport prints happen inside SWRDT)
+        print("Sent Message: " + message)
 
-        # print the result
-        if msg_S:
-            print("Received Message: " + msg_S + "\n")
+        # Send via stop-and-wait protocol
+        swrdt.swrdt_send(message)
 
+        # Now attempt to receive echo back from Receiver.py
+        reply = None
+        start_wait = time.time()
+
+        while reply is None and (time.time() - start_wait < timeout):
+            reply = swrdt.swrdt_receive()
+            if reply is None:
+                time.sleep(0.05)
+
+        if reply:
+            print("Received Message: " + reply + "\n")
+        else:
+            print("NO ECHO RECEIVED (receiver timeout)\n")
+
+    # Send shutdown signal to receiver
+    swrdt.swrdt_send("END")
     swrdt.disconnect()

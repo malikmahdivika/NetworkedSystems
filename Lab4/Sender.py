@@ -37,6 +37,7 @@ if __name__ == "__main__":
             msg_S = swrdt.swrdt_receive()
             if msg_S is None:
                 if time_of_last_data + timeout < time.time():
+                    swrdt.timeout_send(msg_S)
                     break
                 else:
                     continue

@@ -74,6 +74,8 @@ class Segment:
 class SWRDT:
     ## latest sequence number used in a segment
     seq_num = 1
+    ## current sender state
+    sender_expects_ACK = False
     ## buffer of bytes read from network
     byte_buffer = ""
 
@@ -84,9 +86,18 @@ class SWRDT:
         self.network.disconnect()
 
     def swrdt_send(self, msg_S):
+        # build segment with current sequence number, compute checksum, and send it
         p = Segment(self.seq_num, msg_S)
         self.seq_num += 1
         self.network.network_send(p.get_byte_S())
+        print("Send message seq_num: ", p.seq_num)
+
+    def timeout_send(self, msg_S):
+        # resend the last segment
+        p = Segment(self.seq_num - 1, msg_S)
+        self.network.network_send(p.get_byte_S())
+        print("Timeout resend message seq_num: ", p.seq_num)
+        
 
     def swrdt_receive(self):
         ret_S = None
